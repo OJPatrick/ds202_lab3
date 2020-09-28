@@ -1,0 +1,165 @@
+---
+title: "ds202_lab3"
+author: "Patrick Origer"
+date: "9/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#install.packages('readxl')
+#library('readx1')
+dat <- readxl::read_xls('extract.xls')
+dat
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+```{r}
+dat <- rename(dat, 'Year' = 'Gss year for this respondent', 'ID' = 'Respondent id number', 'MS' = 'Marital status', 'Education' = 'Highest year of school completed', 'Sex' = 'Respondents sex', 'Income' = 'Respondents income', 'Affiliation' = 'Political party affiliation', 'Happiness' = 'General happiness', 'Ballot' = 'Ballot used for interview')
+```
+
+
+
+```{r}
+dat$EducationYears <- as.numeric(dat$Education)
+
+AffEduMean <- dat %>% group_by(Affiliation) %>%
+  summarise(meanEducation = mean(EducationYears, na.rm=TRUE)) %>%
+  arrange(desc(meanEducation))
+
+AffEduMedian <- dat %>% group_by(Affiliation) %>%
+  summarise(medianEducation = median(EducationYears, na.rm=TRUE)) %>%
+  arrange(desc(medianEducation))
+
+AffEduMean
+
+dat <- full_join(dat, AffEduMedian, by='Affiliation')
+
+```
+
+1. It seems that picking or at least leaning to a political party is more typical of people with more years of education. Independent and Don't know are two of the lowest Affiliations. Those two affiliations don't pick or lean to any side politically, so it seems that people that answer the same way are more likely to have less years of education than people of other more political affiliations.
+
+```{r}
+betterEducated <- dat %>% group_by(Affiliation) %>%
+  mutate(BE = ifelse(EducationYears > medianEducation, "Yes", "No"))
+
+str(betterEducated)
+
+```
+
+
+```{r}
+happinessDat <- dat %>% 
+  mutate(happy = ifelse(Happiness == "Very happy" | Happiness == "Pretty happy", "Happy", "Not happy"))
+
+ggplot(happinessDat, aes(MS)) + geom_histogram(stat="count", aes(fill=happy)) + labs(title = "Happiness and Marital Status Histogram")
+  
+```
+```{r}
+statusHappy1<- happinessDat %>% 
+  select(MS, happy) %>%
+  group_by(MS) %>%
+  summarise(number = n())
+statusHappy1
+```
+```{r}
+statusHappy2<- happinessDat %>% 
+  select(MS, happy) %>%
+  group_by(happy) %>%
+  summarise(number = n())
+statusHappy2
+```
+3. It seems that for every different marital status type, the number of happy people is greater than those that are not happy. The histograms displays that a large number of married people are happy. By looking at the histogram, it appears that married people have the highest ratio of being happy to unhappy. There are far few responses from separated and widowed respondents, but their numbers of happiness are still far higher than their numbers of unhappy people. I believe that being married has an increased correlation of being happy, but all of the other marital statuses are similar in overall distribution to married people.
+
+```{r}
+ggplot(happinessDat, aes(Affiliation)) + geom_histogram(stat="count", aes(fill=happy)) + labs(title = "Happiness and Political Affiliation Histogram") + theme(axis.text.x =element_text(angle=45))
+```
+```{r}
+statusHappy3 <- happinessDat %>% 
+  select(Affiliation, happy, MS) %>%
+  group_by(Affiliation, happy, MS) %>%
+  summarise(number = n()) 
+sh1 <- statusHappy3 %>% arrange(desc(number))
+sh1
+```
+```{r}
+statusHappy3
+```
+4. The histogram is displaying that Independents are have a large proportion of unhappy people to happy people. Their numbers are not as great as Strong democrat and Not strong democrat, however their number of unhappy people is close in comparison while their number of happy people is considerably lower than the two democrat affiliations. Looking through the summarized tables, no response for political affiliation has very few responses, but their number of happy people to unhappy people is close to each other. There are a little more than 3 times as many happy people who responded with No response than unhappy people. This closer distribution seems to be most prevalent in No response than any of the other political affiliations.
+
+```{r}
+#dat$EducationYears <- as.numeric(dat$Education)
+
+#AffEduMean <- dat %>% group_by(Affiliation) %>%
+ # summarise(meanEducation = mean(EducationYears, na.rm=TRUE)) %>%
+ # arrange(desc(meanEducation))
+
+#AffEduMedian <- dat %>% group_by(Affiliation) %>%
+ # summarise(medianEducation = median(EducationYears, na.rm=TRUE)) %>%
+#  arrange(desc(medianEducation))
+
+#AffEduMean
+
+#dat <- full_join(dat, AffEduMedian, by='Affiliation')
+```
+
+```{r}
+MSE <- dat %>% group_by(MS) %>%
+  summarise(meanMSE = mean(EducationYears, na.rm = TRUE),
+            medianMSE = median(EducationYears, na.rm = TRUE),
+            sdMSE = sd(EducationYears, na.rm = TRUE),
+            count = n())
+MSE
+```
+
+```{r}
+boxplotMSE <- ggplot(dat, aes(y=EducationYears)) + 
+    geom_boxplot() +
+    facet_wrap(vars(MS)) +
+    labs(title = "Marital Status and Education in Years Boxplots")
+boxplotMSE
+```
+5. A perplexing feature from this specific exploration is when looking at the "No answer" response. It is small group of only 27 responses, however their mean and median values are considerably higher than all other groups. Also, their standard deviation is lowest in comparison to other responses. With the total responses being low, this outcome is not hard to believe, but it is still an interesting result. The response with the second highest mean in education was "Never married". This is a believable result, because people who are not married will likely have more freedom to further their education more so than people who are married who would likely make education decisions based around other people's lives, their spouse and possibly children, before their own.
+
+```{r}
+boxplotMSI <- ggplot(dat, aes(y=EducationYears)) + 
+    geom_boxplot() +
+    facet_wrap(vars(Income)) +
+    labs(title = "Education in Years and Income Boxplots")
+boxplotMSI
+```
+```{r}
+EI <- dat %>% group_by(Income) %>%
+  summarise(meanMSI = mean(EducationYears, na.rm = TRUE),
+            medianMSI = median(EducationYears, na.rm = TRUE),
+            sdMSI = sd(EducationYears, na.rm = TRUE),
+            count = n()) %>%
+            arrange(desc(count))
+EI
+```
+5. It is not surprising that respondents who answer "25000 or more" for their income appear to typically have the largest income typically. This is due to multiple reasons in my opinion. First, more affluent families typically push their children to further their education and they usually have the resources to support them more financially than less affluent families. Second, more people have been attending university in the last few decades. Given that the typical incomes of this last decade or so is greater than what is was 30 years or more ago, that would lead to more respondents falling into the "25000 or more" response. It is interesting that the "Not applicable" response was used most frequently. The "Not applicable" response has the lowest mean education in years. This could be due to less educated respondents not feeling secure in disclosing their income bracket or that they don't feel that that is something others should know about.
+
+```{r}
+boxplotHE <- ggplot(dat, aes(y=EducationYears)) + 
+    geom_boxplot() +
+    facet_wrap(vars(Happiness)) +
+    labs(title = "Education in Years and Happiness Boxplots")
+boxplotHE
+```
+```{r}
+HE <- dat %>% group_by(Happiness) %>%
+  summarise(meanHE = mean(EducationYears, na.rm = TRUE),
+            medianHE = median(EducationYears, na.rm = TRUE),
+            sdHE = sd(EducationYears, na.rm = TRUE),
+            count = n()) %>%
+            arrange(desc(meanHE))
+HE
+```
+6. How is Happiness Related to Education? Are more happy people well educated?
+It seems that "Not applicable" respondents have a greater mean education in years. This could be due the fact that more educated people will think over the question and come to a decision that they aren't overall one feeling of happiness or the other. They may also think the question is not important. It also seems that more educated people are happier whereas "Not too happy" respondents have a mean education in years lower than most other responses. 
